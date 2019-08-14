@@ -16,41 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-#ifndef H_IMG_MGMT_
-#define H_IMG_MGMT_
-
-#include <inttypes.h>
-struct image_version;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * Command IDs for image management group.
- */
-#define IMG_MGMT_ID_STATE           0
-#define IMG_MGMT_ID_UPLOAD          1
-#define IMG_MGMT_ID_FILE            2
-#define IMG_MGMT_ID_CORELIST        3
-#define IMG_MGMT_ID_CORELOAD        4
-#define IMG_MGMT_ID_ERASE           5
+#include "test_cborattr.h"
 
 /*
- * IMG_MGMT_ID_UPLOAD statuses.
+ * Simple decoding. Only have key for one of the key/value pairs.
  */
-#define IMG_MGMT_ID_UPLOAD_STATUS_START         0
-#define IMG_MGMT_ID_UPLOAD_STATUS_ONGOING       1
-#define IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE      2
+TEST_CASE(test_cborattr_decode_partial)
+{
+    const uint8_t *data;
+    int len;
+    int rc;
+    char test_str_b[4] = { '\0' };
+    struct cbor_attr_t test_attrs[] = {
+        [0] = {
+            .attribute = "b",
+            .type = CborAttrTextStringType,
+            .addr.string = test_str_b,
+            .len = sizeof(test_str_b),
+            .nodefault = true
+        },
+        [1] = {
+            .attribute = NULL
+        }
+    };
 
-/**
- * @brief Registers the image management command handler group.
- */ 
-void img_mgmt_register_group(void);
-
-#ifdef __cplusplus
+    data = test_str1(&len);
+    rc = cbor_read_flat_attrs(data, len, test_attrs);
+    TEST_ASSERT(rc == 0);
+    TEST_ASSERT(!strcmp(test_str_b, "B"));
 }
-#endif
-
-#endif /* H_IMG_MGMT_ */

@@ -17,40 +17,19 @@
  * under the License.
  */
 
-#ifndef H_IMG_MGMT_
-#define H_IMG_MGMT_
-
-#include <inttypes.h>
-struct image_version;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * Command IDs for image management group.
- */
-#define IMG_MGMT_ID_STATE           0
-#define IMG_MGMT_ID_UPLOAD          1
-#define IMG_MGMT_ID_FILE            2
-#define IMG_MGMT_ID_CORELIST        3
-#define IMG_MGMT_ID_CORELOAD        4
-#define IMG_MGMT_ID_ERASE           5
-
+#include "test_cborattr.h"
 /*
- * IMG_MGMT_ID_UPLOAD statuses.
+ * {"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
  */
-#define IMG_MGMT_ID_UPLOAD_STATUS_START         0
-#define IMG_MGMT_ID_UPLOAD_STATUS_ONGOING       1
-#define IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE      2
+static const uint8_t test_data1[] = {
+    0xa5, 0x61, 0x61, 0x61, 0x41, 0x61, 0x62, 0x61,
+    0x42, 0x61, 0x63, 0x61, 0x43, 0x61, 0x64, 0x61,
+    0x44, 0x61, 0x65, 0x61, 0x45
+};
 
-/**
- * @brief Registers the image management command handler group.
- */ 
-void img_mgmt_register_group(void);
-
-#ifdef __cplusplus
+const uint8_t *
+test_str1(int *len)
+{
+    *len = sizeof(test_data1);
+    return (test_data1);
 }
-#endif
-
-#endif /* H_IMG_MGMT_ */

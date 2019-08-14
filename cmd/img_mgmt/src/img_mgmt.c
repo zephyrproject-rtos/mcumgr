@@ -242,7 +242,7 @@ img_mgmt_erase(struct mgmt_ctxt *ctxt)
         /* No free slot. */
         return MGMT_ERR_EBADSTATE;
     }
-
+    
     rc = img_mgmt_impl_erase_slot();
 
     err = 0;
@@ -298,6 +298,42 @@ img_mgmt_check_header(const uint8_t *req_data, size_t len)
 }
 
 /**
+ * Compares two image version numbers in a semver-compatible way.
+ *
+ * @param a                     The first version to compare.
+ * @param b                     The second version to compare.
+ *
+ * @return                      -1 if a < b
+ * @return                       0 if a = b
+ * @return                       1 if a > b
+ */
+static int
+imgr_vercmp(const struct image_version *a, const struct image_version *b)
+{
+    if (a->iv_major < b->iv_major) {
+        return -1;
+    } else if (a->iv_major > b->iv_major) {
+        return 1;
+    }
+
+    if (a->iv_minor < b->iv_minor) {
+        return -1;
+    } else if (a->iv_minor > b->iv_minor) {
+        return 1;
+    }
+
+    if (a->iv_revision < b->iv_revision) {
+        return -1;
+    } else if (a->iv_revision > b->iv_revision) {
+        return 1;
+    }
+
+    /* Note: For semver compativility, don't compare the 32-bit build num. */
+
+    return 0;
+}
+
+/**
  * Processes an upload request specifying an offset of 0 (i.e., the first image
  * chunk).  The caller is responsible for encoding the response.
  */
@@ -341,17 +377,21 @@ img_mgmt_upload_first_chunk(struct mgmt_ctxt *ctxt, const uint8_t *req_data,
 static int
 img_mgmt_upload(struct mgmt_ctxt *ctxt)
 {
+    struct mgmt_evt_op_cmd_status_arg cmd_status_arg;
     uint8_t img_mgmt_data[IMG_MGMT_UL_CHUNK_SIZE];
     uint8_t data_sha[IMG_MGMT_DATA_SHA_LEN];
     size_t data_sha_len = 0;
+    struct image_version cur_ver;
+    struct image_header new_hdr;
     unsigned long long len;
     unsigned long long off;
     size_t data_len;
     size_t new_off;
+    bool upgrade;
     bool last;
     int rc;
 
-    const struct cbor_attr_t off_attr[] = {
+    const struct cbor_attr_t upload_attr[] = {
         [0] = {
             .attribute = "data",
             .type = CborAttrByteStringType,
@@ -377,14 +417,20 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
             .addr.bytestring.data = data_sha,
             .addr.bytestring.len = &data_sha_len,
             .len = sizeof(data_sha)
-         },
-         [4] = { 0 },
+        },
+        [4] = {
+            .attribute = "upgrade",
+            .type = CborAttrBooleanType,
+            .addr.boolean = &upgrade,
+            .dflt.boolean = false,
+        },
+        [5] = { 0 },
     };
 
     len = ULLONG_MAX;
     off = ULLONG_MAX;
     data_len = 0;
-    rc = cbor_read_object(&ctxt->it, off_attr);
+    rc = cbor_read_object(&ctxt->it, upload_attr);
     if (rc || off == ULLONG_MAX) {
         return MGMT_ERR_EINVAL;
     }
@@ -405,6 +451,8 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
             return MGMT_ERR_EINVAL;
         }
 
+        cmd_status_arg.status = IMG_MGMT_ID_UPLOAD_STATUS_START;
+
         /*
          * If request includes proper data hash we can check whether there is
          * upload in progress (interrupted due to e.g. link disconnection) with
@@ -414,7 +462,23 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
          if ((data_sha_len > 0) && img_mgmt_ctxt.uploading) {
             if ((img_mgmt_ctxt.data_sha_len == data_sha_len) &&
                     !memcmp(img_mgmt_ctxt.data_sha, data_sha, data_sha_len)) {
-                return img_mgmt_encode_upload_rsp(ctxt, 0);
+                goto done;
+            }
+        }
+
+        if (upgrade) {
+            /* User specified upgrade-only.  Make sure new image version is
+             * greater than that of the currently running image.
+             */
+            rc = img_mgmt_read_info(0, &cur_ver, NULL, NULL);
+            if (rc != 0) {
+                return MGMT_ERR_EUNKNOWN;
+            }
+
+            memcpy(&new_hdr, img_mgmt_data, sizeof new_hdr);
+
+            if (imgr_vercmp(&cur_ver, &new_hdr.ih_ver) >= 0) {
+                return MGMT_ERR_EBADSTATE;
             }
         }
 
@@ -429,9 +493,11 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
             return MGMT_ERR_EINVAL;
         }
 
+        cmd_status_arg.status = IMG_MGMT_ID_UPLOAD_STATUS_ONGOING;
+
         if (off != img_mgmt_ctxt.off) {
             /* Invalid offset.  Drop the data and send the expected offset. */
-            return img_mgmt_encode_upload_rsp(ctxt, 0);
+            goto done;
         }
     }
 
@@ -454,7 +520,13 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
     if (last) {
         /* Upload complete. */
         img_mgmt_ctxt.uploading = false;
+
+        cmd_status_arg.status = IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE;
     }
+
+done:
+    mgmt_evt(MGMT_EVT_OP_CMD_STATUS, MGMT_GROUP_ID_IMAGE, IMG_MGMT_ID_UPLOAD,
+             &cmd_status_arg);
 
     return img_mgmt_encode_upload_rsp(ctxt, 0);
 }

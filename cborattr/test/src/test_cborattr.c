@@ -17,40 +17,33 @@
  * under the License.
  */
 
-#ifndef H_IMG_MGMT_
-#define H_IMG_MGMT_
+#include "sysinit/sysinit.h"
+#include "syscfg/syscfg.h"
+#include "testutil/testutil.h"
+#include "test_cborattr.h"
 
-#include <inttypes.h>
-struct image_version;
+TEST_SUITE(test_cborattr_suite)
+{
+    test_cborattr_decode1();
+    test_cborattr_decode_partial();
+    test_cborattr_decode_simple();
+    test_cborattr_decode_object();
+    test_cborattr_decode_int_array();
+    test_cborattr_decode_bool_array();
+    test_cborattr_decode_string_array();
+    test_cborattr_decode_object_array();
+    test_cborattr_decode_unnamed_array();
+    test_cborattr_decode_substring_key();
+}
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#if MYNEWT_VAL(SELFTEST)
+int
+main(int argc, char **argv)
+{
+    sysinit();
 
-/**
- * Command IDs for image management group.
- */
-#define IMG_MGMT_ID_STATE           0
-#define IMG_MGMT_ID_UPLOAD          1
-#define IMG_MGMT_ID_FILE            2
-#define IMG_MGMT_ID_CORELIST        3
-#define IMG_MGMT_ID_CORELOAD        4
-#define IMG_MGMT_ID_ERASE           5
+    test_cborattr_suite();
 
-/*
- * IMG_MGMT_ID_UPLOAD statuses.
- */
-#define IMG_MGMT_ID_UPLOAD_STATUS_START         0
-#define IMG_MGMT_ID_UPLOAD_STATUS_ONGOING       1
-#define IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE      2
-
-/**
- * @brief Registers the image management command handler group.
- */ 
-void img_mgmt_register_group(void);
-
-#ifdef __cplusplus
+    return tu_any_failed;
 }
 #endif
-
-#endif /* H_IMG_MGMT_ */
