@@ -5,7 +5,7 @@ This is mcumgr, version 0.0.1
 mcumgr is a management library for 32-bit MCUs.   The goal of mcumgr is to
 define a common management infrastructure with pluggable transport and encoding
 components.  In addition, mcumgr provides definitions and handlers for some
-core commands: image management, file system management, and OS managment.
+core commands: image management, file system management, and OS management.
 
 mcumgr is operating system and hardware independent.  It relies on hardware
 porting layers from the operating system it runs on.  Currently, mcumgr runs on
@@ -112,14 +112,10 @@ see the comments at the top of `smp/include/smp/smp.h`.
 ## Supported transports
 
 The mcumgr project defines two transports:
-    * SMP/Console
-    * SMP/Bluetooth
+* [SMP/Console](transport/smp-console.md)
+* [SMP/Bluetooth](transport/smp-bluetooth.md)
 
-Particulars of these transports are specified in the following documents:
-    * SMP/Console: `transports/smp-console.md`
-    * SMP/Bluetooth: `transports/smp-bluetooth.md`
-
-Implementations, being hardware- and OS-specified, are not included.
+Implementations, being hardware- and OS-specific, are not included.
 
 ## Browsing
 
@@ -127,12 +123,12 @@ Information and documentation for mcumgr is stored within the source.
 
 For more information in the source, here are some pointers:
 
-- [cborattr](https://github.com/apache/mynewt-mcumgr/tree/master/cborattr): Used for parsing incoming mcumgr requests.  Destructures mcumgr packets and populates corresponding field variables.
-- [cmd](https://github.com/apache/mynewt-mcumgr/tree/master/cmd): Built-in command handlers for the core mcumgr commands.
-- [ext](https://github.com/apache/mynewt-mcumgr/tree/master/ext): Third-party libraries that mcumgr depends on.
-- [mgmt](https://github.com/apache/mynewt-mcumgr/tree/master/mgmt): Code implementing the `mgmt` layer of mcumgr.
-- [samples](https://github.com/apache/mynewt-mcumgr/tree/master/samples): Sample applications utilizing mcumgr.
-- [smp](https://github.com/apache/mynewt-mcumgr/tree/master/smp): The built-in transfer encoding: Simple management protocol.
+- [cborattr](cborattr): Used for parsing incoming mcumgr requests.  Destructures mcumgr packets and populates corresponding field variables.
+- [cmd](cmd): Built-in command handlers for the core mcumgr commands.
+- [ext](ext): Third-party libraries that mcumgr depends on.
+- [mgmt](mgmt): Code implementing the `mgmt` layer of mcumgr.
+- [samples](samples): Sample applications utilizing mcumgr.
+- [smp](smp): The built-in transfer encoding: Simple management protocol.
 
 ## Joining
 

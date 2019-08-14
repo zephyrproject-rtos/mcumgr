@@ -16,41 +16,42 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#ifndef TEST_CBORATTR_H
+#define TEST_CBORATTR_H
 
-#ifndef H_IMG_MGMT_
-#define H_IMG_MGMT_
-
-#include <inttypes.h>
-struct image_version;
+#include <assert.h>
+#include <string.h>
+#include "testutil/testutil.h"
+#include "test_cborattr.h"
+#include "tinycbor/cbor.h"
+#include "cborattr/cborattr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Command IDs for image management group.
+/*
+ * Returns test data.
  */
-#define IMG_MGMT_ID_STATE           0
-#define IMG_MGMT_ID_UPLOAD          1
-#define IMG_MGMT_ID_FILE            2
-#define IMG_MGMT_ID_CORELIST        3
-#define IMG_MGMT_ID_CORELOAD        4
-#define IMG_MGMT_ID_ERASE           5
+const uint8_t *test_str1(int *len);
 
 /*
- * IMG_MGMT_ID_UPLOAD statuses.
+ * Testcases
  */
-#define IMG_MGMT_ID_UPLOAD_STATUS_START         0
-#define IMG_MGMT_ID_UPLOAD_STATUS_ONGOING       1
-#define IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE      2
-
-/**
- * @brief Registers the image management command handler group.
- */ 
-void img_mgmt_register_group(void);
+TEST_CASE_DECL(test_cborattr_decode1);
+TEST_CASE_DECL(test_cborattr_decode_partial);
+TEST_CASE_DECL(test_cborattr_decode_simple);
+TEST_CASE_DECL(test_cborattr_decode_object);
+TEST_CASE_DECL(test_cborattr_decode_int_array);
+TEST_CASE_DECL(test_cborattr_decode_bool_array);
+TEST_CASE_DECL(test_cborattr_decode_string_array);
+TEST_CASE_DECL(test_cborattr_decode_object_array);
+TEST_CASE_DECL(test_cborattr_decode_unnamed_array);
+TEST_CASE_DECL(test_cborattr_decode_substring_key);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* H_IMG_MGMT_ */
+#endif /* TEST_CBORATTR_H */
+
