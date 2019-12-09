@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <misc/util.h>
+#include <sys/util.h>
 #include <stats.h>
 #include <mgmt/mgmt.h>
 #include <stat_mgmt/stat_mgmt.h>
