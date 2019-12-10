@@ -18,7 +18,7 @@
  */
 
 #include <sys/util.h>
-#include <stats.h>
+#include <stats/stats.h>
 #include <mgmt/mgmt.h>
 #include <stat_mgmt/stat_mgmt.h>
 #include <stat_mgmt/stat_mgmt_impl.h>
