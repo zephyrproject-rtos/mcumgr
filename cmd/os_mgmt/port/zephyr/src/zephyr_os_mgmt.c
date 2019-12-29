@@ -18,10 +18,10 @@
  */
 
 #include <zephyr.h>
-#include <misc/reboot.h>
+#include <power/reboot.h>
 #include <debug/object_tracing.h>
 #include <kernel_structs.h>
-#include <misc/stack.h>
+#include <debug/stack.h>
 #include <mgmt/mgmt.h>
 #include <util/mcumgr_util.h>
 #include <os_mgmt/os_mgmt.h>

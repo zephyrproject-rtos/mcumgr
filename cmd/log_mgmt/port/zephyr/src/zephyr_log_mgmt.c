@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <misc/util.h>
+#include <sys/util.h>
 #include <logging/mdlog.h>
 #include <mgmt/mgmt.h>
 #include <log_mgmt/log_mgmt.h>
