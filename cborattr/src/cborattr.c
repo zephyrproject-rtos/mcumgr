@@ -385,7 +385,7 @@ cbor_read_flat_attrs(const uint8_t *data, int len,
     CborError err;
 
     cbor_buf_reader_init(&reader, data, len);
-    err = cbor_parser_cust_reader_init(&reader.r, 0, &parser, &value);
+    err = cbor_parser_init(&reader.r, 0, &parser, &value);
     if (err != CborNoError) {
         return -1;
     }

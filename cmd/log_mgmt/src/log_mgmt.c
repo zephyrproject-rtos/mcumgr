@@ -105,7 +105,7 @@ log_mgmt_cb_encode(const struct log_mgmt_entry *entry, void *arg)
     /*** First, determine if this entry would fit. */
 
     cbor_cnt_writer_init(&cnt_writer);
-    cbor_encoder_cust_writer_init(&cnt_encoder, &cnt_writer.enc, 0);
+    cbor_encoder_init(&cnt_encoder, &cnt_writer.enc, 0);
     rc = log_mgmt_encode_entry(&cnt_encoder, entry, &entry_len);
     if (rc != 0) {
         return rc;

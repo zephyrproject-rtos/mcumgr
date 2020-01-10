@@ -144,13 +144,13 @@ mgmt_ctxt_init(struct mgmt_ctxt *ctxt, struct mgmt_streamer *streamer)
 {
     int rc;
 
-    rc = cbor_parser_cust_reader_init(streamer->reader, 0, &ctxt->parser,
+    rc = cbor_parser_init(streamer->reader, 0, &ctxt->parser,
                                       &ctxt->it);
     if (rc != CborNoError) {
         return mgmt_err_from_cbor(rc);
     }
 
-    cbor_encoder_cust_writer_init(&ctxt->encoder, streamer->writer, 0);
+    cbor_encoder_init(&ctxt->encoder, streamer->writer, 0);
 
     return 0;
 }
