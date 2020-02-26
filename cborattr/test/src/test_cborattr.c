@@ -17,29 +17,33 @@
  * under the License.
  */
 
-#ifndef H_LOG_MGMT_CONFIG_
-#define H_LOG_MGMT_CONFIG_
-
-#if defined MYNEWT
-
+#include "sysinit/sysinit.h"
 #include "syscfg/syscfg.h"
+#include "testutil/testutil.h"
+#include "test_cborattr.h"
 
-#define LOG_MGMT_CHUNK_SIZE MYNEWT_VAL(LOG_MGMT_CHUNK_SIZE)
-#define LOG_MGMT_NAME_LEN   MYNEWT_VAL(LOG_MGMT_NAME_LEN)
-#define LOG_MGMT_BODY_LEN   MYNEWT_VAL(LOG_MGMT_BODY_LEN)
+TEST_SUITE(test_cborattr_suite)
+{
+    test_cborattr_decode1();
+    test_cborattr_decode_partial();
+    test_cborattr_decode_simple();
+    test_cborattr_decode_object();
+    test_cborattr_decode_int_array();
+    test_cborattr_decode_bool_array();
+    test_cborattr_decode_string_array();
+    test_cborattr_decode_object_array();
+    test_cborattr_decode_unnamed_array();
+    test_cborattr_decode_substring_key();
+}
 
-#elif defined __ZEPHYR__
+#if MYNEWT_VAL(SELFTEST)
+int
+main(int argc, char **argv)
+{
+    sysinit();
 
-#define LOG_MGMT_CHUNK_SIZE CONFIG_LOG_MGMT_CHUNK_SIZE
-#define LOG_MGMT_NAME_LEN   CONFIG_LOG_MGMT_NAME_LEN
-#define LOG_MGMT_BODY_LEN   CONFIG_LOG_MGMT_BODY_LEN
+    test_cborattr_suite();
 
-#else
-
-/* No direct support for this OS.  The application needs to define the above
- * settings itself.
- */
-
-#endif
-
+    return tu_any_failed;
+}
 #endif

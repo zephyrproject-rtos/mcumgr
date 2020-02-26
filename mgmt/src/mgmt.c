@@ -18,10 +18,12 @@
  */
 
 #include <string.h>
-#include "cbor.h"
+
+#include "tinycbor/cbor.h"
 #include "mgmt/endian.h"
 #include "mgmt/mgmt.h"
 
+static mgmt_on_evt_cb *evt_cb;
 static struct mgmt_group *mgmt_group_list;
 static struct mgmt_group *mgmt_group_list_end;
 
@@ -69,6 +71,35 @@ mgmt_streamer_free_buf(struct mgmt_streamer *streamer, void *buf)
     streamer->cfg->free_buf(buf, streamer->cb_arg);
 }
 
+static struct mgmt_group *
+mgmt_find_group(uint16_t group_id, uint16_t command_id)
+{
+    struct mgmt_group *group;
+
+    /*
+     * Find the group with the specified group id, if one exists
+     * check the handler for the command id and make sure
+     * that is not NULL. If that is not set, look for the group
+     * with a command id that is set
+     */
+    for (group = mgmt_group_list; group != NULL; group = group->mg_next) {
+        if (group->mg_group_id == group_id) {
+            if (command_id >= group->mg_handlers_count) {
+                return NULL;
+            }
+
+            if (!group->mg_handlers[command_id].mh_read &&
+                !group->mg_handlers[command_id].mh_write) {
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    return group;
+}
+
 void
 mgmt_register_group(struct mgmt_group *group)
 {
@@ -80,31 +111,13 @@ mgmt_register_group(struct mgmt_group *group)
     mgmt_group_list_end = group;
 }
 
-static struct mgmt_group *
-mgmt_find_group(uint16_t group_id)
-{
-    struct mgmt_group *group;
-
-    for (group = mgmt_group_list; group != NULL; group = group->mg_next) {
-        if (group->mg_group_id == group_id) {
-            return group;
-        }
-    }
-
-    return NULL;
-}
-
 const struct mgmt_handler *
 mgmt_find_handler(uint16_t group_id, uint16_t command_id)
 {
     const struct mgmt_group *group;
 
-    group = mgmt_find_group(group_id);
-    if (group == NULL) {
-        return NULL;
-    }
-
-    if (command_id >= group->mg_handlers_count) {
+    group = mgmt_find_group(group_id, command_id);
+    if (!group) {
         return NULL;
     }
 
@@ -144,13 +157,21 @@ mgmt_ctxt_init(struct mgmt_ctxt *ctxt, struct mgmt_streamer *streamer)
 {
     int rc;
 
+#ifdef __ZEPHYR__
     rc = cbor_parser_cust_reader_init(streamer->reader, 0, &ctxt->parser,
                                       &ctxt->it);
+#else
+    rc = cbor_parser_init(streamer->reader, 0, &ctxt->parser, &ctxt->it);
+#endif
     if (rc != CborNoError) {
         return mgmt_err_from_cbor(rc);
     }
 
+#ifdef __ZEPHYR__
     cbor_encoder_cust_writer_init(&ctxt->encoder, streamer->writer, 0);
+#else
+    cbor_encoder_init(&ctxt->encoder, streamer->writer, 0);
+#endif
 
     return 0;
 }
@@ -167,4 +188,18 @@ mgmt_hton_hdr(struct mgmt_hdr *hdr)
 {
     hdr->nh_len = htons(hdr->nh_len);
     hdr->nh_group = htons(hdr->nh_group);
+}
+
+void
+mgmt_register_evt_cb(mgmt_on_evt_cb *cb)
+{
+    evt_cb = cb;
+}
+
+void
+mgmt_evt(uint8_t opcode, uint16_t group, uint8_t id, void *arg)
+{
+    if (evt_cb) {
+        evt_cb(opcode, group, id, arg);
+    }
 }
