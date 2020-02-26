@@ -5,8 +5,9 @@ transmitted over text consoles.
 
 ## Overview
 
-Mcumgr packets sent over serial are fragmented into frames of 128 bytes or
-fewer.
+Mcumgr packets sent over serial are fragmented into frames of 127 bytes or
+fewer.  This 127-byte maximum applies to the entire frame, including header,
+CRC, and terminating newline.
 
 The initial frame in a packet has the following format:
 
