@@ -333,10 +333,11 @@ img_mgmt_impl_erase_image_data(unsigned int off, unsigned int num_bytes)
     /* align requested erase size to the erase-block-size */
     struct device *dev = flash_area_get_device(fa);
     struct flash_pages_info page;
+    off_t page_offset = fa->fa_off + num_bytes - 1;
 
-    rc = flash_get_page_info_by_offs(dev, fa->fa_off + num_bytes -1, &page);
+    rc = flash_get_page_info_by_offs(dev, page_offset, &page);
     if (rc != 0) {
-        LOG_ERR("bad offset (0x%x)", fa->fa_off + num_bytes -1);
+        LOG_ERR("bad offset (0x%lx)", (long)page_offset);
         rc = MGMT_ERR_EUNKNOWN;
         goto end_fa;
     }
@@ -346,13 +347,13 @@ img_mgmt_impl_erase_image_data(unsigned int off, unsigned int num_bytes)
     rc = flash_area_erase(fa, 0, erase_size);
 
     if (rc != 0) {
-        LOG_ERR("image slot erase of 0x%x bytes failed (err %d)", erase_size,
+        LOG_ERR("image slot erase of 0x%zx bytes failed (err %d)", erase_size,
                 rc);
         rc = MGMT_ERR_EUNKNOWN;
         goto end_fa;
     }
 
-    LOG_INF("Erased 0x%x bytes of image slot", erase_size);
+    LOG_INF("Erased 0x%zx bytes of image slot", erase_size);
 
     /* erase the image trailer area if it was not erased */
     off = BOOT_TRAILER_IMG_STATUS_OFFS(fa);
@@ -364,13 +365,13 @@ img_mgmt_impl_erase_image_data(unsigned int off, unsigned int num_bytes)
 
         rc = flash_area_erase(fa, off, erase_size);
         if (rc != 0) {
-            LOG_ERR("image slot trailer erase of 0x%x bytes failed (err %d)",
+            LOG_ERR("image slot trailer erase of 0x%zx bytes failed (err %d)",
                     erase_size, rc);
             rc = MGMT_ERR_EUNKNOWN;
             goto end_fa;
         }
 
-        LOG_INF("Erased 0x%x bytes of image slot trailer", erase_size);
+        LOG_INF("Erased 0x%zx bytes of image slot trailer", erase_size);
     }
 
     rc = 0;
