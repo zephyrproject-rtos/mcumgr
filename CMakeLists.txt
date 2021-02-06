@@ -30,5 +30,6 @@ zephyr_library_link_libraries(MCUMGR)
 target_link_libraries(MCUMGR INTERFACE
   zephyr_interface
   )
+target_link_libraries(MCUMGR INTERFACE MCUBOOT_BOOTUTIL)
 
 endif()
