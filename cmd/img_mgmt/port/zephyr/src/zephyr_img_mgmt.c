@@ -91,9 +91,12 @@ zephyr_img_mgmt_flash_check_empty(uint8_t fa_id, bool *out_empty)
 }
 
 /**
- * Get flash_area ID for a image slot number.
+ * Get flash_area ID for a image number; actually the slots are images
+ * for Zephyr, as slot 0 of image 0 is image_0, slot 0 of image 1 is
+ * image_2 and so on. The function treats slot numbers as absolute
+ * slot number starting at 0.
  */
-static uint8_t
+static int
 zephyr_img_mgmt_flash_area_id(int slot)
 {
     uint8_t fa_id;
@@ -107,49 +110,59 @@ zephyr_img_mgmt_flash_area_id(int slot)
         fa_id = FLASH_AREA_ID(image_1);
         break;
 
+#if FLASH_AREA_LABEL_EXISTS(image_2)
+    case 2:
+        fa_id = FLASH_AREA_ID(image_2);
+        break;
+#endif
+
+#if FLASH_AREA_LABEL_EXISTS(image_3)
+    case 3:
+        fa_id = FLASH_AREA_ID(image_3);
+        break;
+#endif
+
     default:
-        assert(0);
-        fa_id = FLASH_AREA_ID(image_1);
+        fa_id = -1;
         break;
     }
 
     return fa_id;
 }
 
+/**
+ * The function will check if given slot is available, and allowed, for DFU;
+ * providing -1 as a parameter means find any unused and non-active available;
+ * if checks area positive, then area ID is returned, -1 is returned otherwise.
+ * Note that auto-selection is performed only between two first slots.
+ */
 static int
-img_mgmt_find_best_area_id(void)
+img_mgmt_get_unused_slot_area_id(int slot)
 {
-    struct image_version ver;
-    int best = -1;
-    int i;
-    int rc;
-
-    for (i = 0; i < 2; i++) {
-        rc = img_mgmt_read_info(i, &ver, NULL, NULL);
-        if (rc < 0) {
-            continue;
-        }
-        if (rc == 0) {
-            /* Image in slot is ok. */
-            if (img_mgmt_slot_in_use(i)) {
-                /* Slot is in use; can't use this. */
-                continue;
-            } else {
-                /*
-                 * Not active slot, but image is ok. Use it if there are
-                 * no better candidates.
-                 */
-                best = i;
+    /* Auto select slot; note that this is performed only between two first
+     * slots, at this pointi, which will require fix when Direct-XIP, which may
+     * support more slots, gets support within Zephyr. */
+    if (slot < -1) {
+        return -1;
+    } else if (slot == -1) {
+        for (slot = 0; slot < 2; slot++) {
+            if (img_mgmt_slot_in_use(slot) == 0) {
+                int area_id = zephyr_img_mgmt_flash_area_id(slot);
+                if (area_id != -1) {
+                    return area_id;
+                }
             }
-            continue;
         }
-        best = i;
-        break;
+        return -1;
     }
-    if (best >= 0) {
-        best = zephyr_img_mgmt_flash_area_id(best);
+    /* Direct selection; the first two slots are checked for being available
+     * and unused; the all other slots are just checked for availability. */
+    if (slot < 2) {
+        slot = img_mgmt_slot_in_use(slot) == 0 ? slot : -1;
     }
-    return best;
+
+    /* Return area ID for the slot or -1 */
+    return slot != -1  ? zephyr_img_mgmt_flash_area_id(slot) : -1;
 }
 
 /**
@@ -192,11 +205,13 @@ int
 img_mgmt_impl_erase_slot(void)
 {
     bool empty;
-    int rc;
+    int rc, best_id;
 
-    /* Select non-active slot */
-    const int best_id = img_mgmt_find_best_area_id();
-
+    /* Select any non-active, unused slot */
+    best_id = img_mgmt_get_unused_slot_area_id(-1);
+    if (best_id < 0) {
+        return MGMT_ERR_EUNKNOWN;
+    }
     rc = zephyr_img_mgmt_flash_check_empty(best_id, &empty);
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
@@ -292,7 +307,7 @@ img_mgmt_impl_write_image_data(unsigned int offset, const void *data,
 			}
 		}
 #endif
-		rc = flash_img_init_id(ctx, img_mgmt_find_best_area_id());
+		rc = flash_img_init_id(ctx, g_img_mgmt_state.area_id);
 
 		if (rc != 0) {
 			return MGMT_ERR_EUNKNOWN;
@@ -330,7 +345,7 @@ img_mgmt_impl_erase_image_data(unsigned int off, unsigned int num_bytes)
         goto end;
     }
 
-    rc = flash_area_open(img_mgmt_find_best_area_id(), &fa);
+    rc = flash_area_open(g_img_mgmt_state.area_id, &fa);
     if (rc != 0) {
         LOG_ERR("Can't bind to the flash area (err %d)", rc);
         rc = MGMT_ERR_EUNKNOWN;
@@ -490,7 +505,7 @@ img_mgmt_impl_upload_inspect(const struct img_mgmt_upload_req *req,
             }
         }
 
-        action->area_id = img_mgmt_find_best_area_id();
+        action->area_id = img_mgmt_get_unused_slot_area_id(req->image - 1);
         if (action->area_id < 0) {
             /* No slot where to upload! */
             *errstr = img_mgmt_err_str_no_slot;

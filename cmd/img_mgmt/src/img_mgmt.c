@@ -314,6 +314,10 @@ img_mgmt_erase(struct mgmt_ctxt *ctxt)
     
     rc = img_mgmt_impl_erase_slot();
 
+    if (!rc) {
+        img_mgmt_dfu_stopped();
+    }
+
     err = 0;
     err |= cbor_encode_text_stringz(&ctxt->encoder, "rc");
     err |= cbor_encode_int(&ctxt->encoder, rc);
@@ -394,42 +398,49 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         .data_len = 0,
         .data_sha_len = 0,
         .upgrade = false,
+        .image = 0,
     };
 
     const struct cbor_attr_t off_attr[] = {
         [0] = {
+            .attribute = "image",
+            .type = CborAttrUnsignedIntegerType,
+            .addr.uinteger = &req.image,
+            .nodefault = true
+        },
+        [1] = {
             .attribute = "data",
             .type = CborAttrByteStringType,
             .addr.bytestring.data = req.img_data,
             .addr.bytestring.len = &req.data_len,
             .len = sizeof(req.img_data)
         },
-        [1] = {
+        [2] = {
             .attribute = "len",
             .type = CborAttrUnsignedIntegerType,
             .addr.uinteger = &req.size,
             .nodefault = true
         },
-        [2] = {
+        [3] = {
             .attribute = "off",
             .type = CborAttrUnsignedIntegerType,
             .addr.uinteger = &req.off,
             .nodefault = true
         },
-        [3] = {
+        [4] = {
             .attribute = "sha",
             .type = CborAttrByteStringType,
             .addr.bytestring.data = req.data_sha,
             .addr.bytestring.len = &req.data_sha_len,
             .len = sizeof(req.data_sha)
         },
-        [4] = {
+        [5] = {
             .attribute = "upgrade",
             .type = CborAttrBooleanType,
             .addr.boolean = &req.upgrade,
             .dflt.boolean = false,
         },
-        [5] = { 0 },
+        [6] = { 0 },
     };
     int rc;
     const char *errstr = NULL;
