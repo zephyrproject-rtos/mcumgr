@@ -288,6 +288,15 @@ img_mgmt_error_rsp(struct mgmt_ctxt *ctxt, int rc, const char *rsn)
 }
 #endif
 
+/*
+ * Resets upload status to defaults (no upload in progress)
+ */
+void img_mgmt_reset_upload(void)
+{
+    memset(&g_img_mgmt_state, 0, sizeof(g_img_mgmt_state));
+    g_img_mgmt_state.area_id = -1;
+}
+
 /**
  * Command handler: image erase
  */
@@ -311,8 +320,9 @@ img_mgmt_erase(struct mgmt_ctxt *ctxt)
             return MGMT_ERR_EBADSTATE;
         }
     }
-    
+
     rc = img_mgmt_impl_erase_slot();
+    img_mgmt_reset_upload();
 
     if (!rc) {
         img_mgmt_dfu_stopped();
@@ -400,6 +410,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         .upgrade = false,
         .image = 0,
     };
+    bool reset = false;
 
     const struct cbor_attr_t off_attr[] = {
         [0] = {
@@ -526,6 +537,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         if (img_mgmt_impl_erase_if_needed(req.off, action.write_bytes) != 0) {
             rc = MGMT_ERR_EUNKNOWN;
             errstr = img_mgmt_err_str_flash_erase_failed;
+            reset = true;
             goto end;
         }
 #endif
@@ -538,6 +550,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         if (rc != 0) {
             rc = MGMT_ERR_EUNKNOWN;
             errstr = img_mgmt_err_str_flash_write_failed;
+            reset = true;
             goto end;
         } else {
             g_img_mgmt_state.off += action.write_bytes;
@@ -545,7 +558,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
                 /* Done */
                 img_mgmt_dfu_pending();
                 cmd_status_arg.status = IMG_MGMT_ID_UPLOAD_STATUS_COMPLETE;
-                g_img_mgmt_state.area_id = -1;
+                reset = true;
             }
         }
     }
@@ -555,6 +568,11 @@ end:
     img_mgmt_upload_log(req.off == 0, g_img_mgmt_state.off == g_img_mgmt_state.size, rc);
     mgmt_evt(MGMT_EVT_OP_CMD_STATUS, MGMT_GROUP_ID_IMAGE, IMG_MGMT_ID_UPLOAD,
              &cmd_status_arg);
+
+    if (reset == true || rc != 0) {
+        /* Reset the upload state struct back to default */
+        img_mgmt_reset_upload();
+    }
 
     if (rc != 0) {
         img_mgmt_dfu_stopped();
